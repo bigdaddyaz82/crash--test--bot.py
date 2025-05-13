@@ -1,107 +1,131 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crash Bot Pro Simulator</title>
   <style>
     body {
-      font-family: monospace;
-      background: #111;
-      color: #0f0;
-      margin: 0;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
       padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
     }
-    h1 { margin-bottom: 10px; }
-    input, button {
-      padding: 10px;
-      margin: 5px;
-      font-size: 1rem;
+    #ship {
+      font-size: 3rem;
+      margin-bottom: 20px;
     }
-    button {
-      background: #0f0;
-      color: #111;
+    #multiplier {
+      font-size: 2rem;
       font-weight: bold;
+    }
+    #balance {
+      font-size: 1.5rem;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    .button {
+      padding: 10px 20px;
+      margin: 10px;
+      background-color: #4CAF50;
+      color: white;
       border: none;
       cursor: pointer;
+      font-size: 1.2rem;
     }
-    #log {
-      white-space: pre-wrap;
-      margin-top: 20px;
-      max-height: 50vh;
-      overflow-y: auto;
-      width: 100%;
-      max-width: 600px;
-      background: #000;
-      padding: 10px;
-      border-radius: 10px;
-    }
-    footer {
-      margin-top: 30px;
-      font-size: 0.85rem;
-      color: #888;
-    }
-    @media (max-width: 600px) {
-      input, button { width: 90%; }
+    .button:disabled {
+      background-color: #cccccc;
     }
   </style>
 </head>
 <body>
-  <h1>Crash Bot Pro Simulator</h1>  <input id="startBalance" type="number" placeholder="Starting Balance (e.g., 100)" />
-  <input id="betPercent" type="number" placeholder="Bet % (e.g., 1)" />
-  <input id="autoCashout" type="number" step="0.01" placeholder="Auto Cashout (e.g., 1.75)" />
-  <input id="stopLoss" type="number" placeholder="Stop Loss % (e.g., 80)" />
-  <input id="stopWin" type="number" placeholder="Stop Win % (e.g., 150)" />
-  <button onclick="runSimulation()">Run Simulation</button>
-  <button onclick="connectWallet()">Connect Wallet</button>  <div id="walletDisplay"></div>
-  <div id="log"></div>  <footer>
-    &copy; 2025 bigdaddyaz82™ | All rights reserved.
-  </footer>  <script>
-    function simulateCrashGame() {
-      return +(Math.random() * 19 + 1).toFixed(2);
-    }
 
-    function runSimulation() {
-      const logDiv = document.getElementById('log');
-      logDiv.innerHTML = '';
+  <h1>Crash Bot Pro Simulator</h1>
 
-      let balance = parseFloat(document.getElementById('startBalance').value);
-      const betPercent = parseFloat(document.getElementById('betPercent').value) / 100;
-      const autoCashout = parseFloat(document.getElementById('autoCashout').value);
-      const stopLoss = balance * (parseFloat(document.getElementById('stopLoss').value) / 100);
-      const stopWin = balance * (parseFloat(document.getElementById('stopWin').value) / 100);
+  <div id="ship">⛵</div>
+  <div id="multiplier">Multiplier: 1.00x</div>
 
-      while (balance > stopLoss && balance < stopWin) {
-        let bet = balance * betPercent;
-        let crashMultiplier = simulateCrashGame();
+  <div>
+    <input type="number" id="startingBalance" value="100" placeholder="Starting Balance" />
+    <input type="number" id="betPercentage" value="1" placeholder="Bet %" />
+    <input type="number" id="autoCashout" value="2.00" placeholder="Auto Cashout" />
+    <input type="number" id="stopLoss" value="50" placeholder="Stop Loss" />
+    <input type="number" id="stopWin" value="150" placeholder="Stop Win" />
+  </div>
 
-        if (crashMultiplier >= autoCashout) {
-          let win = bet * (autoCashout - 1);
-          balance += win;
-          logDiv.innerHTML += `WIN! Crash: ${crashMultiplier} | +${win.toFixed(2)} | Balance: ${balance.toFixed(2)}\n`;
-        } else {
-          balance -= bet;
-          logDiv.innerHTML += `LOSS. Crash: ${crashMultiplier} | -${bet.toFixed(2)} | Balance: ${balance.toFixed(2)}\n`;
+  <div>
+    <button id="startButton" class="button">Start Simulation</button>
+    <button id="resetButton" class="button" disabled>Reset</button>
+  </div>
+
+  <div id="balance">Balance: 100.00</div>
+
+  <script>
+    let balance = 100;
+    let betPercentage = 1;
+    let autoCashout = 2.00;
+    let stopLoss = 50;
+    let stopWin = 150;
+    let startingBalance = 100;
+    let shipElement = document.getElementById('ship');
+    let multiplierElement = document.getElementById('multiplier');
+    let balanceElement = document.getElementById('balance');
+    let startButton = document.getElementById('startButton');
+    let resetButton = document.getElementById('resetButton');
+
+    startButton.addEventListener('click', startSimulation);
+    resetButton.addEventListener('click', resetSimulation);
+
+    function startSimulation() {
+      let currentMultiplier = 1;
+      let crashMultiplier = Math.random() * 2 + 1; // Random crash multiplier between 1.0x and 3.0x
+      let betAmount = (betPercentage / 100) * balance;
+      let targetCashout = autoCashout;
+
+      resetSimulation();  // Reset for each new round
+
+      let simulationInterval = setInterval(() => {
+        if (currentMultiplier >= crashMultiplier || balance <= stopLoss || balance >= stopWin) {
+          clearInterval(simulationInterval);
+          if (currentMultiplier >= targetCashout) {
+            balance += betAmount * (targetCashout - 1);
+            multiplierElement.innerHTML = `Multiplier: ${currentMultiplier.toFixed(2)}x - Cashout Success!`;
+          } else {
+            balance -= betAmount;
+            multiplierElement.innerHTML = `Multiplier: ${currentMultiplier.toFixed(2)}x - Crash!`;
+          }
+          balanceElement.innerHTML = `Balance: ${balance.toFixed(2)}`;
+          resetButton.disabled = false;
+          startButton.disabled = false;
+          return;
         }
-      }
 
-      logDiv.innerHTML += `\nSession Ended. Final Balance: ${balance.toFixed(2)}\n`; 
+        // Update multiplier and ship position
+        currentMultiplier += 0.01;  // Increment multiplier
+        shipElement.style.transform = `translateY(-${(currentMultiplier - 1) * 100}px)`;  // Ship moves up
+        multiplierElement.innerHTML = `Multiplier: ${currentMultiplier.toFixed(2)}x`;
+      }, 100);  // Update every 100ms
+
+      startButton.disabled = true;
+      resetButton.disabled = false;
     }
 
-    async function connectWallet() {
-      const walletDisplay = document.getElementById('walletDisplay');
-      if (typeof window.ethereum !== 'undefined') {
-        try {
-          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-          walletDisplay.innerText = `Wallet Connected: ${accounts[0]}`;
-        } catch (error) {
-          walletDisplay.innerText = 'Connection rejected.';
-        }
-      } else {
-        walletDisplay.innerText = 'MetaMask not detected. Please install it.';
-      }
+    function resetSimulation() {
+      balance = startingBalance;
+      multiplierElement.innerHTML = `Multiplier: 1.00x`;
+      balanceElement.innerHTML = `Balance: ${balance.toFixed(2)}`;
+      shipElement.style.transform = 'translateY(0)';
+      resetButton.disabled = true;
+      startButton.disabled = false;
     }
-  </script></body>
+
+    // Populate inputs with initial values
+    document.getElementById('startingBalance').value = startingBalance;
+    document.getElementById('betPercentage').value = betPercentage;
+    document.getElementById('autoCashout').value = autoCashout;
+    document.getElementById('stopLoss').value = stopLoss;
+    document.getElementById('stopWin').value = stopWin;
+  </script>
+
+</body>
 </html>
