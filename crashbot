@@ -1,0 +1,26 @@
+# crash_bot_simulator.py
+import random
+
+balance = 100.0
+base_bet = balance * 0.01
+auto_cashout = 1.75
+stop_loss = balance * 0.80
+stop_win = balance * 1.50
+
+def simulate_crash_game():
+    # Simulates a crash multiplier (e.g., 1.01x to 20x)
+    return round(random.uniform(1.00, 20.00), 2)
+
+while balance > stop_loss and balance < stop_win:
+    bet = base_bet
+    crash_multiplier = simulate_crash_game()
+    
+    if crash_multiplier >= auto_cashout:
+        win = bet * (auto_cashout - 1)
+        balance += win
+        print(f"WIN! Crash: {crash_multiplier} | +{win:.2f} | Balance: {balance:.2f}")
+    else:
+        balance -= bet
+        print(f"LOSS. Crash: {crash_multiplier} | -{bet:.2f} | Balance: {balance:.2f}")
+
+  print("Session Ended.")
