@@ -1,40 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Crash Bot Pro Simulator</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       background-color: #f0f0f0;
-      padding: 20px;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    #ship-container {
+      position: relative;
+      height: 1000px;
+      width: 100px;
+      margin: 0 auto 30px;
+      background: linear-gradient(to top, #e0f7fa, #fff);
+      border: 2px solid #ccc;
+      border-radius: 10px;
     }
     #ship {
       font-size: 3rem;
-      margin-bottom: 20px;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
     }
     #multiplier {
       font-size: 2rem;
       font-weight: bold;
+      margin: 20px 0;
     }
     #balance {
       font-size: 1.5rem;
-      margin-top: 20px;
       font-weight: bold;
+      margin: 20px 0;
+    }
+    .controls input {
+      padding: 10px;
+      margin: 10px;
+      font-size: 1rem;
+      width: 150px;
     }
     .button {
-      padding: 10px 20px;
+      padding: 12px 25px;
       margin: 10px;
       background-color: #4CAF50;
       color: white;
       border: none;
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
+      border-radius: 6px;
     }
     .button:disabled {
-      background-color: #cccccc;
+      background-color: #999;
+      cursor: not-allowed;
     }
   </style>
 </head>
@@ -42,19 +66,23 @@
 
   <h1>Crash Bot Pro Simulator</h1>
 
-  <div id="ship">⛵</div>
+  <div id="ship-container">
+    <div id="ship">⛵</div>
+  </div>
+
   <div id="multiplier">Multiplier: 1.00x</div>
 
-  <div>
+  <div class="controls">
     <input type="number" id="startingBalance" value="100" placeholder="Starting Balance" />
     <input type="number" id="betPercentage" value="1" placeholder="Bet %" />
-    <input type="number" id="autoCashout" value="2.00" placeholder="Auto Cashout" />
+    <input type="number" id="autoCashout" value="2.00" placeholder="Auto Cashout" step="0.01" />
     <input type="number" id="stopLoss" value="50" placeholder="Stop Loss" />
     <input type="number" id="stopWin" value="150" placeholder="Stop Win" />
   </div>
 
   <div>
-    <button id="startButton" class="button">Start Simulation</button>
+    <button id="startButton" class="button">Start</button>
+    <button id="stopButton" class="button" disabled>Stop</button>
     <button id="resetButton" class="button" disabled>Reset</button>
   </div>
 
@@ -62,69 +90,115 @@
 
   <script>
     let balance = 100;
-    let betPercentage = 1;
-    let autoCashout = 2.00;
-    let stopLoss = 50;
-    let stopWin = 150;
     let startingBalance = 100;
-    let shipElement = document.getElementById('ship');
-    let multiplierElement = document.getElementById('multiplier');
-    let balanceElement = document.getElementById('balance');
-    let startButton = document.getElementById('startButton');
-    let resetButton = document.getElementById('resetButton');
+    let simulationInterval;
+    let currentMultiplier = 1;
+    let crashMultiplier = 0;
+    let isRunning = false;
 
-    startButton.addEventListener('click', startSimulation);
-    resetButton.addEventListener('click', resetSimulation);
+    const ship = document.getElementById("ship");
+    const multiplierDisplay = document.getElementById("multiplier");
+    const balanceDisplay = document.getElementById("balance");
+
+    const startButton = document.getElementById("startButton");
+    const stopButton = document.getElementById("stopButton");
+    const resetButton = document.getElementById("resetButton");
+
+    const startingBalanceInput = document.getElementById("startingBalance");
+    const betPercentageInput = document.getElementById("betPercentage");
+    const autoCashoutInput = document.getElementById("autoCashout");
+    const stopLossInput = document.getElementById("stopLoss");
+    const stopWinInput = document.getElementById("stopWin");
+
+    function updateShipPosition(multiplier) {
+      const maxHeight = 1000;
+      const cappedMultiplier = Math.min(multiplier, 10); // cap visual scale at 10x
+      const height = (cappedMultiplier / 10) * maxHeight;
+      ship.style.bottom = `${height}px`;
+    }
 
     function startSimulation() {
-      let currentMultiplier = 1;
-      let crashMultiplier = Math.random() * 2 + 1; // Random crash multiplier between 1.0x and 3.0x
-      let betAmount = (betPercentage / 100) * balance;
-      let targetCashout = autoCashout;
+      if (isRunning) return;
+      isRunning = true;
 
-      resetSimulation();  // Reset for each new round
+      // Get user input values
+      balance = parseFloat(startingBalanceInput.value);
+      startingBalance = balance;
+      const betPercentage = parseFloat(betPercentageInput.value);
+      const autoCashout = parseFloat(autoCashoutInput.value);
+      const stopLoss = parseFloat(stopLossInput.value);
+      const stopWin = parseFloat(stopWinInput.value);
 
-      let simulationInterval = setInterval(() => {
-        if (currentMultiplier >= crashMultiplier || balance <= stopLoss || balance >= stopWin) {
-          clearInterval(simulationInterval);
-          if (currentMultiplier >= targetCashout) {
-            balance += betAmount * (targetCashout - 1);
-            multiplierElement.innerHTML = `Multiplier: ${currentMultiplier.toFixed(2)}x - Cashout Success!`;
-          } else {
-            balance -= betAmount;
-            multiplierElement.innerHTML = `Multiplier: ${currentMultiplier.toFixed(2)}x - Crash!`;
-          }
-          balanceElement.innerHTML = `Balance: ${balance.toFixed(2)}`;
-          resetButton.disabled = false;
-          startButton.disabled = false;
-          return;
-        }
-
-        // Update multiplier and ship position
-        currentMultiplier += 0.01;  // Increment multiplier
-        shipElement.style.transform = `translateY(-${(currentMultiplier - 1) * 100}px)`;  // Ship moves up
-        multiplierElement.innerHTML = `Multiplier: ${currentMultiplier.toFixed(2)}x`;
-      }, 100);  // Update every 100ms
+      currentMultiplier = 1.00;
+      crashMultiplier = (Math.random() * 2 + 1).toFixed(2); // between 1.00x–3.00x
+      const betAmount = (betPercentage / 100) * balance;
 
       startButton.disabled = true;
+      stopButton.disabled = false;
+      resetButton.disabled = true;
+
+      simulationInterval = setInterval(() => {
+        if (!isRunning) return;
+        currentMultiplier += 0.01;
+        updateShipPosition(currentMultiplier);
+        multiplierDisplay.innerText = `Multiplier: ${currentMultiplier.toFixed(2)}x`;
+
+        if (
+          currentMultiplier >= crashMultiplier ||
+          currentMultiplier >= autoCashout
+        ) {
+          clearInterval(simulationInterval);
+          isRunning = false;
+
+          if (currentMultiplier >= autoCashout) {
+            balance += betAmount * (autoCashout - 1);
+            multiplierDisplay.innerText += " — Cashed Out!";
+          } else {
+            balance -= betAmount;
+            multiplierDisplay.innerText += " — Crashed!";
+          }
+
+          balanceDisplay.innerText = `Balance: ${balance.toFixed(2)}`;
+          resetButton.disabled = false;
+          stopButton.disabled = true;
+
+          if (balance <= stopLoss || balance >= stopWin) {
+            multiplierDisplay.innerText += " — Auto Stopped.";
+            return;
+          }
+
+          setTimeout(() => {
+            if (!isRunning) startSimulation();
+          }, 5000);
+        }
+      }, 100);
+    }
+
+    function stopSimulation() {
+      clearInterval(simulationInterval);
+      isRunning = false;
+      stopButton.disabled = true;
+      startButton.disabled = false;
       resetButton.disabled = false;
+      multiplierDisplay.innerText += " — Manually Stopped.";
     }
 
     function resetSimulation() {
-      balance = startingBalance;
-      multiplierElement.innerHTML = `Multiplier: 1.00x`;
-      balanceElement.innerHTML = `Balance: ${balance.toFixed(2)}`;
-      shipElement.style.transform = 'translateY(0)';
-      resetButton.disabled = true;
+      clearInterval(simulationInterval);
+      isRunning = false;
+      currentMultiplier = 1.00;
+      ship.style.bottom = "0px";
+      multiplierDisplay.innerText = "Multiplier: 1.00x";
+      balance = parseFloat(startingBalanceInput.value);
+      balanceDisplay.innerText = `Balance: ${balance.toFixed(2)}`;
       startButton.disabled = false;
+      stopButton.disabled = true;
+      resetButton.disabled = true;
     }
 
-    // Populate inputs with initial values
-    document.getElementById('startingBalance').value = startingBalance;
-    document.getElementById('betPercentage').value = betPercentage;
-    document.getElementById('autoCashout').value = autoCashout;
-    document.getElementById('stopLoss').value = stopLoss;
-    document.getElementById('stopWin').value = stopWin;
+    startButton.addEventListener("click", startSimulation);
+    stopButton.addEventListener("click", stopSimulation);
+    resetButton.addEventListener("click", resetSimulation);
   </script>
 
 </body>
