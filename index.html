@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crash Bot Simulator</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+    button { padding: 10px; background: #0f0; color: #111; border: none; font-weight: bold; }
+    #log { white-space: pre-wrap; margin-top: 20px; max-height: 80vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Crash Bot Simulator</h1>
+  <button onclick="runSimulation()">Run Simulation</button>
+  <div id="log"></div>
+
+  <script>
+    function simulateCrashGame() {
+      return +(Math.random() * 19 + 1).toFixed(2);
+    }
+
+    function runSimulation() {
+      let balance = 100;
+      const baseBet = balance * 0.01;
+      const autoCashout = 1.75;
+      const stopLoss = balance * 0.80;
+      const stopWin = balance * 1.50;
+
+      const logDiv = document.getElementById('log');
+      logDiv.innerHTML = '';
+
+      while (balance > stopLoss && balance < stopWin) {
+        let bet = baseBet;
+        let crashMultiplier = simulateCrashGame();
+
+        if (crashMultiplier >= autoCashout) {
+          let win = bet * (autoCashout - 1);
+          balance += win;
+          logDiv.innerHTML += `WIN! Crash: ${crashMultiplier} | +${win.toFixed(2)} | Balance: ${balance.toFixed(2)}\n`;
+        } else {
+          balance -= bet;
+          logDiv.innerHTML += `LOSS. Crash: ${crashMultiplier} | -${bet.toFixed(2)} | Balance: ${balance.toFixed(2)}\n`;
+        }
+      }
+
+      logDiv.innerHTML += `\nSession Ended.`;
+    }
+  </script>
+</body>
+</html>
