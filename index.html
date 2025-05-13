@@ -1,205 +1,180 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Crash Bot Pro Simulator</title>
+  <title>TrustShip Crash</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
       text-align: center;
-      padding: 30px;
+      background: #0d0d0d;
+      color: white;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
-      margin-bottom: 30px;
+    .container {
+      margin-top: 40px;
     }
-    #ship-container {
-      position: relative;
-      height: 1000px;
-      width: 100px;
-      margin: 0 auto 30px;
-      background: linear-gradient(to top, #e0f7fa, #fff);
-      border: 2px solid #ccc;
-      border-radius: 10px;
+    .display {
+      font-size: 2em;
+      margin-bottom: 20px;
     }
-    #ship {
-      font-size: 3rem;
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    #multiplier {
-      font-size: 2rem;
-      font-weight: bold;
+    .controls {
       margin: 20px 0;
-    }
-    #balance {
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    .controls input {
-      padding: 10px;
-      margin: 10px;
-      font-size: 1rem;
-      width: 150px;
     }
     .button {
-      padding: 12px 25px;
-      margin: 10px;
-      background-color: #4CAF50;
-      color: white;
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 1em;
+      background: #1a75ff;
       border: none;
+      color: white;
       cursor: pointer;
-      font-size: 1.1rem;
-      border-radius: 6px;
+      border-radius: 5px;
     }
     .button:disabled {
-      background-color: #999;
+      background: #444;
       cursor: not-allowed;
+    }
+    #ship {
+      width: 30px;
+      height: 30px;
+      background: url('https://upload.wikimedia.org/wikipedia/commons/e/e9/Spaceship_icon.svg') no-repeat center;
+      background-size: contain;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      transition: bottom 0.05s linear;
+    }
+    #gameArea {
+      position: relative;
+      height: 400px;
+      width: 100%;
+      background: linear-gradient(to top, #000033, #000066);
+      border-top: 2px solid #ccc;
+      margin-top: 30px;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>TrustShip Crash</h1>
+    <div class="display" id="multiplier">1.00x</div>
+    <div class="display" id="balanceDisplay">Balance: 1000</div><div class="controls">
+  <label for="betPercentage">Bet %:</label>
+  <input type="number" id="betPercentage" min="1" max="100" value="10">
+</div>
 
-  <h1>Crash Bot Pro Simulator</h1>
+<div class="controls">
+  <button id="startButton" class="button">Start</button>
+  <button id="stopButton" class="button" disabled>Stop</button>
+  <button id="resetButton" class="button" disabled>x2 Bet</button>
+</div>
 
-  <div id="ship-container">
-    <div id="ship">⛵</div>
-  </div>
+<div id="gameArea">
+  <div id="ship"></div>
+</div>
 
-  <div id="multiplier">Multiplier: 1.00x</div>
-
-  <div class="controls">
-    <input type="number" id="startingBalance" value="100" placeholder="Starting Balance" />
-    <input type="number" id="betPercentage" value="1" placeholder="Bet %" />
-    <input type="number" id="autoCashout" value="2.00" placeholder="Auto Cashout" step="0.01" />
-    <input type="number" id="stopLoss" value="50" placeholder="Stop Loss" />
-    <input type="number" id="stopWin" value="150" placeholder="Stop Win" />
-  </div>
-
-  <div>
-    <button id="startButton" class="button">Start</button>
-    <button id="stopButton" class="button" disabled>Stop</button>
-    <button id="resetButton" class="button" disabled>Reset</button>
-  </div>
-
-  <div id="balance">Balance: 100.00</div>
-
-  <script>
-    let balance = 100;
-    let startingBalance = 100;
-    let simulationInterval;
-    let currentMultiplier = 1;
-    let crashMultiplier = 0;
-    let isRunning = false;
-
-    const ship = document.getElementById("ship");
+  </div>  <script>
     const multiplierDisplay = document.getElementById("multiplier");
-    const balanceDisplay = document.getElementById("balance");
-
+    const balanceDisplay = document.getElementById("balanceDisplay");
     const startButton = document.getElementById("startButton");
     const stopButton = document.getElementById("stopButton");
     const resetButton = document.getElementById("resetButton");
-
-    const startingBalanceInput = document.getElementById("startingBalance");
     const betPercentageInput = document.getElementById("betPercentage");
-    const autoCashoutInput = document.getElementById("autoCashout");
-    const stopLossInput = document.getElementById("stopLoss");
-    const stopWinInput = document.getElementById("stopWin");
+    const ship = document.getElementById("ship");
 
-    function updateShipPosition(multiplier) {
-      const maxHeight = 1000;
-      const cappedMultiplier = Math.min(multiplier, 10); // cap visual scale at 10x
-      const height = (cappedMultiplier / 10) * maxHeight;
-      ship.style.bottom = `${height}px`;
+    let balance = parseFloat(localStorage.getItem("balance")) || 1000;
+    let currentMultiplier = 1.00;
+    let isRunning = false;
+    let hasStopped = false;
+    let simulationInterval;
+    let crashMultiplier;
+    let lastBetAmount = 0;
+    let lastBetPercentage = parseFloat(betPercentageInput.value);
+
+    function updateBalanceDisplay() {
+      balanceDisplay.innerText = "Balance: " + balance.toFixed(2);
+      localStorage.setItem("balance", balance.toFixed(2));
     }
 
     function startSimulation() {
-      if (isRunning) return;
-      isRunning = true;
-
-      // Get user input values
-      balance = parseFloat(startingBalanceInput.value);
-      startingBalance = balance;
-      const betPercentage = parseFloat(betPercentageInput.value);
-      const autoCashout = parseFloat(autoCashoutInput.value);
-      const stopLoss = parseFloat(stopLossInput.value);
-      const stopWin = parseFloat(stopWinInput.value);
-
       currentMultiplier = 1.00;
-      crashMultiplier = (Math.random() * 2 + 1).toFixed(2); // between 1.00x–3.00x
-      const betAmount = (betPercentage / 100) * balance;
+      hasStopped = false;
+      ship.style.bottom = "0px";
 
+      crashMultiplier = (Math.random() * 4 + 1.5).toFixed(2); // Random between 1.5x and 5.5x
+      const betPercent = parseFloat(betPercentageInput.value);
+      lastBetPercentage = betPercent;
+      lastBetAmount = (balance * betPercent / 100).toFixed(2);
+      balance -= lastBetAmount;
+      updateBalanceDisplay();
+
+      isRunning = true;
       startButton.disabled = true;
       stopButton.disabled = false;
       resetButton.disabled = true;
 
       simulationInterval = setInterval(() => {
         if (!isRunning) return;
-        currentMultiplier += 0.01;
-        updateShipPosition(currentMultiplier);
-        multiplierDisplay.innerText = `Multiplier: ${currentMultiplier.toFixed(2)}x`;
 
-        if (
-          currentMultiplier >= crashMultiplier ||
-          currentMultiplier >= autoCashout
-        ) {
+        currentMultiplier += 0.01;
+        multiplierDisplay.innerText = currentMultiplier.toFixed(2) + "x";
+        const newBottom = Math.min((currentMultiplier / 10) * 400, 400);
+        ship.style.bottom = `${newBottom}px`;
+
+        if (currentMultiplier >= crashMultiplier) {
           clearInterval(simulationInterval);
           isRunning = false;
-
-          if (currentMultiplier >= autoCashout) {
-            balance += betAmount * (autoCashout - 1);
-            multiplierDisplay.innerText += " — Cashed Out!";
-          } else {
-            balance -= betAmount;
-            multiplierDisplay.innerText += " — Crashed!";
-          }
-
-          balanceDisplay.innerText = `Balance: ${balance.toFixed(2)}`;
-          resetButton.disabled = false;
           stopButton.disabled = true;
+          resetButton.disabled = false;
 
-          if (balance <= stopLoss || balance >= stopWin) {
-            multiplierDisplay.innerText += " — Auto Stopped.";
-            return;
+          if (!hasStopped) {
+            multiplierDisplay.innerText += " (CRASHED)";
+            setTimeout(() => {
+              x2BetSimulation();
+            }, 5000);
           }
-
-          setTimeout(() => {
-            if (!isRunning) startSimulation();
-          }, 5000);
         }
-      }, 100);
+      }, 50);
     }
 
     function stopSimulation() {
+      if (!isRunning || hasStopped) return;
+
+      hasStopped = true;
       clearInterval(simulationInterval);
       isRunning = false;
+      const winAmount = lastBetAmount * currentMultiplier;
+      balance += winAmount;
+      updateBalanceDisplay();
+      multiplierDisplay.innerText += " (CASHED OUT)";
       stopButton.disabled = true;
-      startButton.disabled = false;
       resetButton.disabled = false;
-      multiplierDisplay.innerText += " — Manually Stopped.";
     }
 
-    function resetSimulation() {
+    function x2BetSimulation() {
       clearInterval(simulationInterval);
       isRunning = false;
       currentMultiplier = 1.00;
       ship.style.bottom = "0px";
-      multiplierDisplay.innerText = "Multiplier: 1.00x";
-      balance = parseFloat(startingBalanceInput.value);
-      balanceDisplay.innerText = `Balance: ${balance.toFixed(2)}`;
-      startButton.disabled = false;
-      stopButton.disabled = true;
+
+      lastBetPercentage *= 2;
+      if (lastBetPercentage > 100) lastBetPercentage = 100;
+      betPercentageInput.value = lastBetPercentage.toFixed(2);
+
+      startButton.disabled = true;
+      stopButton.disabled = false;
       resetButton.disabled = true;
+
+      startSimulation();
     }
 
     startButton.addEventListener("click", startSimulation);
     stopButton.addEventListener("click", stopSimulation);
-    resetButton.addEventListener("click", resetSimulation);
-  </script>
+    resetButton.addEventListener("click", x2BetSimulation);
 
-</body>
+    updateBalanceDisplay();
+  </script></body>
 </html>
